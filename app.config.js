@@ -1,4 +1,4 @@
-export default {
+module.exports = {
   expo: {
     name: "DagangCerdas",
     slug: "DagangCerdas",
@@ -35,7 +35,7 @@ export default {
       ],
       "expo-sqlite",
       "expo-secure-store",
-      "expo-updates", // Manually Added Plugin
+      "expo-updates",
       [
         "expo-camera",
         {
