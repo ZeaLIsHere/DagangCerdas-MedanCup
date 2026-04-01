@@ -95,5 +95,5 @@ export async function removeApiKey(): Promise<void> {
  */
 export async function hasApiKey(): Promise<boolean> {
   const key = await getApiKey();
-  return !!key && key.length > 0;
+  return !!key && key.length > 0 && key !== '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';
 }
