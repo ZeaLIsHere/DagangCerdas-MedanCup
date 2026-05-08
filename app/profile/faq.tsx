@@ -52,7 +52,7 @@ export default function FAQScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Bantuan & FAQ</Text>
-        <View style={{ width: 40 }} /> {/* Spacer */}
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>

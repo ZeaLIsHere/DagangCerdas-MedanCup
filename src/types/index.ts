@@ -19,6 +19,7 @@ export { BUSINESS_TYPE_LABELS } from './user';
 export type {
   GroupOrder,
   GroupOrderParticipant,
+  JoinedGroupOrder,
   UMKMLocation,
   Vendor,
   GroupOrderStatus,

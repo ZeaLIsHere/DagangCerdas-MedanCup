@@ -16,7 +16,7 @@ import { DEMO_NEARBY_UMKM, DEMO_VENDORS } from '../../src/utils/seedData';
 import { UMKMMap } from '../../src/components/map/UMKMMap';
 import { useRouter } from 'expo-router';
 import { getActiveGroupOrders, joinGroupOrder, getJoinedGroupOrders, updateGroupOrderParticipation } from '../../src/services/database/repository';
-import { uploadGroupOrderParticipant, downloadActiveGroupOrders } from '../../src/services/firebase/firestore-sync';
+import { uploadGroupOrderParticipant, downloadActiveGroupOrders, deleteGroupOrderParticipantFromCloud, updateGroupOrderParticipantInCloud } from '../../src/services/firebase/firestore-sync';
 import type { GroupOrder, GroupOrderParticipant, UMKMLocation, Vendor, JoinedGroupOrder } from '../../src/types/groupBuying';
 import { collection, getDocs } from 'firebase/firestore';
 import { db as firestoreDb } from '../../src/services/firebase/config';
@@ -169,8 +169,14 @@ export default function GroupBuyingScreen() {
       // 1. Update ke SQLite lokal
       await updateGroupOrderParticipation(orderToEdit.id, user.id, qty);
       
-      // 2. Idealnya update Firestore juga jika ada sync
-      // await updateParticipantSync(...);
+      // 2. Sync perubahan ke Firestore agar tidak muncul kembali saat sync
+      if (qty === 0) {
+        // Hapus dari Firestore
+        await deleteGroupOrderParticipantFromCloud(orderToEdit.id, user.id);
+      } else {
+        // Update kuantitas di Firestore
+        await updateGroupOrderParticipantInCloud(orderToEdit.id, user.id, qty);
+      }
 
       Alert.alert('Berhasil', qty === 0 ? 'Anda telah membatalkan pesanan.' : 'Jumlah pesanan berhasil diperbarui.');
       

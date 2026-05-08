@@ -286,7 +286,10 @@ export default function InventoryScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.formBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.formBody} showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 120 }}
+            >
               <Text style={styles.inputLabel}>Nama Produk *</Text>
               <TextInput style={styles.input} value={formName} onChangeText={setFormName}
                 placeholder="Contoh: Ayam Goreng" placeholderTextColor={colors.neutral[400]} />
@@ -446,7 +449,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl, borderBottomWidth: 1, borderBottomColor: colors.border.light,
   },
   formTitle: { ...typography.h4, color: colors.text.primary },
-  formBody: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, maxHeight: 450 },
+  formBody: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, maxHeight: 500 },
   inputLabel: { ...typography.labelSm, color: colors.text.secondary, marginBottom: spacing.xs, marginTop: spacing.md },
   input: {
     backgroundColor: colors.neutral[50], borderRadius: borderRadius.md,

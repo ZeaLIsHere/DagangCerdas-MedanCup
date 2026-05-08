@@ -253,7 +253,8 @@ export async function downloadTransactions(userId: string): Promise<number> {
          total_amount = excluded.total_amount,
          payment_method = excluded.payment_method,
          payment_status = excluded.payment_status,
-         updated_at = excluded.updated_at`,
+         updated_at = excluded.updated_at,
+         deleted_at = excluded.deleted_at`,
         [
           txId,
           userId,
@@ -548,13 +549,23 @@ export async function downloadActiveGroupOrders(): Promise<number> {
     const q = query(ordersRef, where('status', '==', 'terbuka'));
     const snapshot = await getDocs(q);
 
-    if (snapshot.empty) {
-      console.log('[Sync] No active group orders in Firestore');
-      return 0;
-    }
+    // Collect IDs of orders that exist in Firestore
+    const cloudOrderIds = new Set<string>();
+    snapshot.docs.forEach(docSnap => cloudOrderIds.add(docSnap.id));
 
     let count = 0;
     await sqliteDb.withExclusiveTransactionAsync(async () => {
+      // Remove local group orders that no longer exist in Firestore (stale data)
+      const localOrders = await sqliteDb.getAllAsync<any>('SELECT id FROM group_orders WHERE status = ?', ['terbuka']);
+      for (const localOrder of localOrders) {
+        if (!cloudOrderIds.has(localOrder.id)) {
+          // This order was deleted or closed in Firestore — clean up locally
+          await sqliteDb.runAsync('DELETE FROM group_order_participants WHERE group_order_id = ?', [localOrder.id]);
+          await sqliteDb.runAsync('DELETE FROM group_orders WHERE id = ?', [localOrder.id]);
+          console.log(`[Sync] Removed stale local group order ${localOrder.id}`);
+        }
+      }
+
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
         
@@ -605,6 +616,9 @@ export async function syncGroupBuying(): Promise<void> {
  * Download semua data keikutsertaan (participants) user dari Firestore ke SQLite lokal.
  * Pendekatan: iterasi setiap group order yang sudah ada di SQLite lokal,
  * lalu query sub-koleksi participants-nya langsung (menghindari collectionGroup permission issue).
+ * 
+ * PENTING: Fungsi ini juga membersihkan partisipan lokal yang sudah tidak ada di Firestore
+ * untuk mencegah "zombie orders" yang muncul kembali setelah dihapus.
  */
 export async function downloadUserGroupParticipants(userId: string): Promise<number> {
   try {
@@ -615,11 +629,16 @@ export async function downloadUserGroupParticipants(userId: string): Promise<num
     const localOrders = await sqliteDb.getAllAsync<any>('SELECT id FROM group_orders');
 
     if (localOrders.length === 0) {
+      // If no local orders exist, also clean up any orphaned participants
+      await sqliteDb.runAsync('DELETE FROM group_order_participants WHERE user_id = ?', [userId]);
       console.log('[Sync] No local group orders to check for participants');
       return 0;
     }
 
     let count = 0;
+    
+    // Track all valid participant IDs from Firestore so we can clean up stale local ones
+    const validParticipantIds = new Set<string>();
 
     for (const order of localOrders) {
       try {
@@ -630,6 +649,8 @@ export async function downloadUserGroupParticipants(userId: string): Promise<num
 
         for (const docSnap of snapshot.docs) {
           const data = docSnap.data();
+          const participantId = data.id || docSnap.id;
+          validParticipantIds.add(participantId);
 
           await sqliteDb.runAsync(
             `INSERT INTO group_order_participants (id, group_order_id, user_id, user_name, business_name, quantity, status, joined_at)
@@ -638,7 +659,7 @@ export async function downloadUserGroupParticipants(userId: string): Promise<num
                quantity = excluded.quantity,
                status = excluded.status`,
             [
-              data.id || docSnap.id,
+              participantId,
               data.groupOrderId || order.id,
               data.userId,
               data.userName || '',
@@ -656,11 +677,91 @@ export async function downloadUserGroupParticipants(userId: string): Promise<num
       }
     }
 
+    // Clean up local participants that no longer exist in Firestore
+    // This prevents "zombie" participations from reappearing after deletion
+    const localParticipants = await sqliteDb.getAllAsync<any>(
+      'SELECT id, group_order_id FROM group_order_participants WHERE user_id = ?',
+      [userId]
+    );
+    
+    for (const localP of localParticipants) {
+      if (!validParticipantIds.has(localP.id)) {
+        await sqliteDb.runAsync('DELETE FROM group_order_participants WHERE id = ?', [localP.id]);
+        console.log(`[Sync] Cleaned up stale local participant ${localP.id}`);
+      }
+    }
+
     console.log(`[Sync] Downloaded ${count} group order participations for user`);
     return count;
   } catch (error) {
     console.error('[Sync] Download user group participants error:', error);
     return 0;
+  }
+}
+
+/**
+ * Delete a participant's entry from Firestore when they cancel their order.
+ * This ensures the deletion is persisted to the cloud and won't be re-downloaded.
+ */
+export async function deleteGroupOrderParticipantFromCloud(
+  groupOrderId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const { where: fsWhere, deleteDoc } = await import('firebase/firestore');
+    
+    // Find all participant docs for this user in this order
+    const participantsRef = collection(firestoreDb, `group_orders/${groupOrderId}/participants`);
+    const q = query(participantsRef, fsWhere('userId', '==', userId));
+    const snapshot = await getDocs(q);
+    
+    for (const docSnap of snapshot.docs) {
+      await deleteDoc(docSnap.ref);
+    }
+    
+    // Also update the parent order's current_quantity in Firestore
+    await uploadGroupOrder(groupOrderId);
+    
+    console.log(`[Sync] Deleted participant for user ${userId} from group order ${groupOrderId}`);
+  } catch (error) {
+    console.error('[Sync] Delete participant from cloud error:', error);
+  }
+}
+
+/**
+ * Update a participant's quantity in Firestore.
+ * This ensures edits are synced to the cloud.
+ */
+export async function updateGroupOrderParticipantInCloud(
+  groupOrderId: string,
+  userId: string,
+  newQuantity: number
+): Promise<void> {
+  try {
+    const { where: fsWhere } = await import('firebase/firestore');
+    
+    const participantsRef = collection(firestoreDb, `group_orders/${groupOrderId}/participants`);
+    const q = query(participantsRef, fsWhere('userId', '==', userId));
+    const snapshot = await getDocs(q);
+    
+    if (!snapshot.empty) {
+      // Update the first matching participant doc
+      const docRef = snapshot.docs[0].ref;
+      await setDoc(docRef, { quantity: newQuantity }, { merge: true });
+      
+      // Delete extra duplicate docs if any
+      for (let i = 1; i < snapshot.docs.length; i++) {
+        const { deleteDoc } = await import('firebase/firestore');
+        await deleteDoc(snapshot.docs[i].ref);
+      }
+    }
+    
+    // Also update the parent order's current_quantity in Firestore
+    await uploadGroupOrder(groupOrderId);
+    
+    console.log(`[Sync] Updated participant qty to ${newQuantity} for user ${userId} in order ${groupOrderId}`);
+  } catch (error) {
+    console.error('[Sync] Update participant in cloud error:', error);
   }
 }
 
