@@ -2,7 +2,7 @@
 
 export const APP_NAME = 'DagangCerdas';
 export const APP_VERSION = '1.0.0';
-export const APP_TAGLINE = 'Solusi Cerdas UMKM Naik Kelas';
+export const APP_TAGLINE = 'UMKM Naik Kelas';
 
 // Default location: Medan, Sumatera Utara
 export const DEFAULT_LOCATION = {

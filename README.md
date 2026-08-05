@@ -1,4 +1,4 @@
-# DagangCerdas — Solusi Cerdas UMKM Naik Kelas
+# DagangCerdas — UMKM Naik Kelas
 
 ![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![Expo](https://img.shields.io/badge/Expo-54.0-000000?style=for-the-badge&logo=expo&logoColor=white)
@@ -177,11 +177,12 @@ Kontribusi dari komunitas open-source sangat kami sambut baik! Jika Anda bermaks
 ## Lisensi & Pengakuan
 
 - **Lisensi**: Proyek ini dilisensikan di bawah **[MIT License](LICENSE)**. Bebas digunakan, dimodifikasi, dan didistribusikan.
-- **Kompetisi**: Dikembangkan sebagai karya untuk **Medan Cup (MCC) 2026** — *Membangun UMKM Digital Menuju Indonesia Emas 2045*.
+- **Kompetisi**: Dikembangkan untuk **AI Innovation Competition (AIC) 2026** — *Membangun UMKM Digital Menuju Indonesia Emas 2045*.
 
 ---
 <p center="align">
-  <b>DagangCerdas</b> — Membawa UMKM Lokal Naik Kelas Lewat Teknologi
+  <b>DagangCerdas</b> — UMKM Naik Kelas
 </p>
+
 
 
