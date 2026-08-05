@@ -5,7 +5,6 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-Offline_First-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Groq AI](https://img.shields.io/badge/Groq_AI-Llama_3.3-F34F29?style=for-the-badge&logo=groq&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green.style=for-the-badge)
 
 **DagangCerdas** adalah aplikasi manajemen bisnis terintegrasi (*Smart POS*, *Inventory*, *Group Buying*, & *AI Mentor*) yang dirancang khusus untuk mendorong digitalisasi dan efisiensi operasional pelaku UMKM (Usaha Mikro, Kecil, dan Menengah) di Kota Medan.
 
